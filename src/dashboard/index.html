@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoDoc Insight | 高雄交通陳情地理洞察</title>
+    <!-- Leaflet GIS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">📍</span>
+                <h1>GeoDoc <span>Insight</span></h1>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="map-tab">
+                    <span class="icon">🗺️</span> 地圖探查
+                </button>
+                <button class="nav-item" data-tab="stats-tab">
+                    <span class="icon">📊</span> 數據分析
+                </button>
+                <button class="nav-item" data-tab="list-tab">
+                    <span class="icon">📝</span> 原始陳情
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot pulse"></span> 系統運行中
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="search-bar">
+                    <input type="text" id="search-input" placeholder="搜尋關鍵字、路名或案號...">
+                </div>
+                <div class="header-filters">
+                    <div class="filter-item">
+                        <label>時間過濾</label>
+                        <select id="month-filter">
+                            <option value="all">所有月份</option>
+                            <option value="2026-03">2026年3月</option>
+                            <option value="2026-04">2026年4月</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>嚴重度 (怨念值)</label>
+                        <select id="severity-filter">
+                            <option value="0">全部</option>
+                            <option value="2.5">🟡 中度 (重複提及)</option>
+                            <option value="5.0">🔴 極高 (關鍵熱點)</option>
+                        </select>
+                    </div>
+                </div>
+            </header>
+
+            <div class="tab-content active" id="map-tab">
+                <div id="map"></div>
+                <!-- Stats Overlay -->
+                <div class="map-stats-overlay">
+                    <div class="legend glass">
+                        <h4>圖例說明</h4>
+                        <div class="legend-item"><span class="dot" style="background:#ef4444; width:12px; height:12px;"></span> 極高 (關鍵區域)</div>
+                        <div class="legend-item"><span class="dot" style="background:#f59e0b; width:10px; height:10px;"></span> 中度 (重複建議)</div>
+                        <div class="legend-item"><span class="dot" style="background:#22d3ee; width:8px; height:8px;"></span> 一般</div>
+                    </div>
+                    <div class="stat-card">
+                        <small>總案件數</small>
+                        <strong id="total-count">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="stats-tab">
+                <div class="stats-grid">
+                    <div class="chart-container glass">
+                        <h3>🔥 投訴路口排行榜 (Top 10)</h3>
+                        <div id="hotspot-chart" style="height: 350px;"></div>
+                    </div>
+                    <div class="chart-container glass">
+                        <div class="chart-header">
+                            <h3>🌉 投訴熱度趨勢視覺</h3>
+                            <div class="toggle-group" id="trend-toggle">
+                                <button class="toggle-btn active" data-unit="month">月</button>
+                                <button class="toggle-btn" data-unit="week">週</button>
+                            </div>
+                        </div>
+                        <div id="trend-chart" style="height: 350px;"></div>
+                    </div>
+                    <div class="chart-container glass">
+                        <h3>🏢 行政區投訴榜</h3>
+                        <div id="district-chart" style="height: 350px;"></div>
+                    </div>
+                    <div class="chart-container glass">
+                        <h3>🛠️ 負責課室案量比例</h3>
+                        <div id="dept-chart" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="list-tab">
+                <div class="full-table-container glass">
+                    <div class="table-header">
+                        <h3>原始陳情明細</h3>
+                        <button id="export-btn" class="view-btn">📤 匯出 CSV</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="case-table">
+                            <thead>
+                                <tr>
+                                    <th>案號</th>
+                                    <th>建議日期</th>
+                                    <th style="width: 45%;">內容陳述 (點擊可展開)</th>
+                                    <th>地理位址與熱度</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Detail Drawer -->
+        <div class="detail-drawer" id="detail-drawer">
+            <button class="close-drawer">&times;</button>
+            <div class="drawer-content">
+                <span class="badge" id="case-source">AI辨識</span>
+                <h2 id="case-id-title">案件詳情</h2>
+                <div class="info-group">
+                    <label>建議日期</label>
+                    <p id="case-date">-</p>
+                </div>
+                <div class="info-group">
+                    <label>建議內容</label>
+                    <div class="content-text" id="case-content">-</div>
+                </div>
+                <div class="info-group">
+                    <label>機關回覆</label>
+                    <div class="reply-text" id="case-reply">-</div>
+                </div>
+                <div class="info-group">
+                    <label>地理位址</label>
+                    <p id="case-address">-</p>
+                    <p class="coords" id="case-coords">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="data.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
