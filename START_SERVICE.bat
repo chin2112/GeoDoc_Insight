@@ -14,24 +14,25 @@ if %errorlevel% neq 0 (
 )
 
 :: 2. Install dependencies
-echo [1/3] 正在安裝相依套件 (requirements.txt)...
+echo [1/4] 正在安裝相依套件 (requirements.txt)...
 pip install -r requirements.txt --quiet
-if %errorlevel% neq 0 (
-    echo [WARNING] 套件安裝可能未完全成功，嘗試繼續運行...
-)
 
 :: 3. Run data pipeline
-echo [2/3] 正在執行數據分析管線 (run_pipeline.py)...
+echo [2/4] 正在執行數據分析管線 (run_pipeline.py)...
 set PYTHONPATH=%CD%
 python run_pipeline.py
-if %errorlevel% neq 0 (
-    echo [ERROR] 數據管線執行失敗。
-    pause
-    exit /b
+
+:: 4. Ask for Ngrok
+echo [3/4] 是否要啟動 Ngrok 進行公網發布? (Y/N)
+set /p start_ngrok="請輸入: "
+if /i "!start_ngrok!"=="Y" (
+    echo [INFO] 正在後台啟動 Ngrok...
+    start "Ngrok Service" ngrok http 8000
+    timeout /t 3 >nul
 )
 
-:: 4. Start Server and Browser
-echo [3/3] 正在啟動網頁服務...
+:: 5. Start Server and Browser
+echo [4/4] 正在啟動網頁服務...
 start http://localhost:8000
 echo 服務已啟動，請勿關閉此視窗。
 cd src\dashboard
