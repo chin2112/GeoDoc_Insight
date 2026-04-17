@@ -2,3 +2,4 @@ pandas
 openpyxl
 fpdf2
 requests
+pyahocorasick
